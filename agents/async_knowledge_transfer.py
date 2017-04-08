@@ -33,9 +33,17 @@ class AKTThread(Thread):
         self.writer = tf.summary.FileWriter(os.path.join(self.master.monitor_path, "task" + str(self.task_id)), self.master.session.graph)
 
     def build_networks(self):
-        with tf.variable_scope("task%s" % self.task_id):
-            self.sparse_representation = tf.Variable(tf.random_normal([self.master.config["n_sparse_units"], self.master.nA]))
-            self.probs = tf.nn.softmax(tf.matmul(self.master.L1, tf.matmul(self.master.knowledge_base, self.sparse_representation)))
+        with tf.variable_scope("task{}".format(self.task_id)):
+            self.sparse_representation = tf.Variable(tf.random_normal([self.master.config["n_sparse_units"], self.master.nA]), name="sparse_representation")
+            self.bias = tf.Variable(tf.zeros([self.master.nA]), name="bias")
+            self.probs = tf.nn.softmax(
+                tf.matmul(
+                    self.master.L1,
+                    tf.matmul(self.master.knowledge_base, self.sparse_representation)
+                ) + self.bias,
+                name="probs")
+
+            self.specific_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
 
             self.action = tf.squeeze(tf.multinomial(tf.log(self.probs), 1), name="action")
 
@@ -180,13 +188,15 @@ class AsyncKnowledgeTransfer(Agent):
                     self.config["switch_at_iter"] if not(last) else self.config["n_iter"],
                     start_at_iter=(0 if not(last) else self.config["switch_at_iter"])))
 
-        net_vars = self.shared_vars + [job.sparse_representation for job in self.jobs]
+        net_vars = list(self.shared_vars)
+        for job in self.jobs:
+            net_vars.extend(job.specific_vars)
         self.accum_grads = create_accumulative_gradients_op(net_vars, 1)
         for i, job in enumerate(self.jobs):
             last = (i == len(self.jobs) - 1)
             job.add_accum_grad = add_accumulative_gradients_op(
-                (self.shared_vars if not(last) else []) + [job.sparse_representation],
-                self.accum_grads if not(last) else [self.accum_grads[-1]],
+                (self.shared_vars if not(last) else []) + job.specific_vars,
+                self.accum_grads if not(last) else self.accum_grads[-len(job.specific_vars):],
                 job.loss,
                 job.task_id)
         self.apply_gradients = self.optimizer.apply_gradients(zip(self.accum_grads, net_vars))
@@ -216,7 +226,7 @@ class AsyncKnowledgeTransfer(Agent):
 
             self.knowledge_base = tf.Variable(tf.random_normal([self.config["n_hidden_units"], self.config["n_sparse_units"]]), name="knowledge_base")
 
-            self.shared_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="shared")
+            self.shared_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
 
             self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.config["learning_rate"], decay=self.config["decay"], epsilon=self.config["epsilon"])
 
