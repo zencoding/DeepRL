@@ -39,11 +39,11 @@ def reset_accumulative_gradients_op(net_vars, accum_grads, identifier=0):
             reset_grad_ops.append(reset_ops)
         return tf.group(*reset_grad_ops, name="reset_accum_group_{}".format(identifier))
 
-def sync_networks_op(source_net, local_net_vars, identifier=0):
+def sync_networks_op(source_net_vars, target_net_vars, identifier=0):
     """Make an operation to sync weights of 2 networks."""
     sync_ops = []
     with tf.name_scope(name="sync_ops_{}".format(identifier), values=[]):
-        for (target_var, source_var) in zip(local_net_vars, source_net.vars):
+        for (target_var, source_var) in zip(target_net_vars, source_net_vars):
             ops = tf.assign(target_var, source_var)
             sync_ops.append(ops)
         return tf.group(*sync_ops, name="sync_group_{}".format(identifier))

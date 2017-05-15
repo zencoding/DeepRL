@@ -7,11 +7,13 @@ import tensorflow as tf
 import logging
 from threading import Thread
 import signal
+import random
 
 from agents.Agent import Agent
 from misc.utils import discount_rewards
 from misc.Reporter import Reporter
 from agents.knowledge_transfer import TaskLearner
+from misc.network_ops import sync_networks_op
 
 class AKTThread(Thread):
     """Asynchronous knowledge transfer learner thread. Used to learn using one specific variation of a task."""
@@ -185,6 +187,9 @@ class AsyncKnowledgeTransfer(Agent):
                 global_step=self.global_step
             )
 
+        # Transfer sparse representation from a random task to the new task
+        self.sparse_net_transfer_op = sync_networks_op([random.choice(self.jobs[:-1]).sparse_representation], [self.jobs[-1].sparse_representation])
+
         self.session.run(tf.global_variables_initializer())
 
         if self.config["save_model"]:
@@ -229,11 +234,10 @@ class AsyncKnowledgeTransfer(Agent):
             job.start()
         for job in self.jobs[:idx]:
             job.join()
-        try:
+        if self.config["switch_at_iter"] is not None:
+            self.session.run(self.sparse_net_transfer_op)
             self.jobs[idx].start()
             self.jobs[idx].join()
-        except TypeError:  # idx is None
-            pass
 
         if self.config["save_model"]:
             self.saver.save(self.session, os.path.join(self.monitor_path, "model"))

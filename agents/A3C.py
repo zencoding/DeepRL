@@ -175,10 +175,10 @@ class A3CThread(Thread):
         actor_optimizer = tf.train.RMSPropOptimizer(learning_rate=self.config["actor_learning_rate"], decay=self.config["decay"], epsilon=self.config["epsilon"])
         critic_optimizer = tf.train.RMSPropOptimizer(learning_rate=self.config["critic_learning_rate"], decay=self.config["decay"], epsilon=self.config["epsilon"])
 
-        self.actor_sync_net = sync_networks_op(master.shared_actor_net, self.actor_net.vars, self.thread_id)
+        self.actor_sync_net = sync_networks_op(master.shared_actor_net.vars, self.actor_net.vars, self.thread_id)
         actor_grads = tf.gradients(self.actor_net.loss, self.actor_net.vars)
 
-        self.critic_sync_net = sync_networks_op(master.shared_critic_net, self.critic_net.vars, self.thread_id)
+        self.critic_sync_net = sync_networks_op(master.shared_critic_net.vars, self.critic_net.vars, self.thread_id)
         critic_grads = tf.gradients(self.critic_net.loss, self.critic_net.vars)
 
         if clip_gradients:
