@@ -297,6 +297,9 @@ class A3CThreadContinuous(A3CThread):
 
 class A3C(Agent):
     """Asynchronous Advantage Actor Critic learner."""
+
+    n_environments = "single"
+
     def __init__(self, env, monitor, monitor_path, video=True, **usercfg):
         super(A3C, self).__init__(**usercfg)
         self.env = env

@@ -16,6 +16,9 @@ from functionapproximation.TileCoding import TileCoding
 
 class SarsaFA(object):
     """Learner using Sarsa and function approximation"""
+
+    n_environments = "single"
+
     def __init__(self, env, monitor_path, video=True, **usercfg):
         super(SarsaFA, self).__init__()
         self.env = env

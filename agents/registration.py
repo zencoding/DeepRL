@@ -8,8 +8,13 @@ agent_registry = {}
 
 def register_agent(name, action_space, cls):
     """Register an enviroment of a name with a class to be instantiated."""
+    data = {
+        "action_space": action_space,
+        "class": cls,
+        "uses_n_environments": cls.n_environments
+    }
     if name not in agent_registry:
-        agent_registry[name] = [{"action_space": action_space, "class": cls}]
+        agent_registry[name] = [data]
     else:
         in_list = next((item for item in enumerate(agent_registry[name]) if item[1]["action_space"] == action_space), False)
         if in_list:

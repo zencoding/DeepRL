@@ -19,6 +19,9 @@ np.set_printoptions(suppress=True)  # Don't use the scientific notation to print
 
 class A2C(Agent):
     """Advantage Actor Critic"""
+
+    n_environments = "single"
+
     def __init__(self, env, monitor_path, video=True, **usercfg):
         super(A2C, self).__init__(**usercfg)
         self.monitor_path = monitor_path

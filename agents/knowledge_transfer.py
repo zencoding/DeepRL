@@ -23,6 +23,9 @@ class TaskPolicy(object):
 
 class KnowledgeTransfer(Agent):
     """Learner for variations of a task."""
+
+    n_environments = "multiple"
+
     def __init__(self, envs, monitor_path, **usercfg):
         super(KnowledgeTransfer, self).__init__(**usercfg)
         self.envs = envs

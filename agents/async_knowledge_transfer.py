@@ -125,6 +125,9 @@ class AKTThread(Thread):
 
 class AsyncKnowledgeTransfer(Agent):
     """Asynchronous learner for variations of a task."""
+
+    n_environments = "multiple"
+
     def __init__(self, envs, monitor_path, learning_method="REINFORCE", **usercfg):
         super(AsyncKnowledgeTransfer, self).__init__(**usercfg)
         self.envs = envs

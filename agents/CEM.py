@@ -59,6 +59,9 @@ class DeterministicContinuousActionLinearPolicy(object):
 
 class CEM(Agent):
     """Cross-Entropy Method learner"""
+
+    n_environments = "single"
+
     def __init__(self, env, monitor_path, video=True, **usercfg):
         super(CEM, self).__init__(**usercfg)
         self.env = wrappers.Monitor(self.env, monitor_path, force=True, video_callable=(None if video else False))

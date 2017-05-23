@@ -22,16 +22,26 @@ class REINFORCE(Agent):
     """
     REINFORCE with baselines
     """
-    def __init__(self, env, monitor_path, video=True, **usercfg):
+    n_environments = "multiple"
+
+    def __init__(self, envs, monitor_path, video=True, **usercfg):
         super(REINFORCE, self).__init__(**usercfg)
-        self.env = wrappers.Monitor(env, monitor_path, force=True, video_callable=(None if video else False))
-        self.env_runner = EnvRunner(self.env, self, usercfg)
+        source_env_idx = np.random.randint(len(envs) - 1)
+        self.env = wrappers.Monitor(
+            envs[source_env_idx],
+            monitor_path,
+            force=True,
+            video_callable=(None if video else False))
+        self.env_runner_source = EnvRunner(self.env, self, usercfg)
+        self.env_runner_target = EnvRunner(envs[-1], self, usercfg)
+        self.env_runner = self.env_runner_source
         self.monitor_path = monitor_path
         # Default configuration. Can be overwritten using keyword arguments.
         self.config.update(dict(
             batch_update="timesteps",
             timesteps_per_batch=10000,
-            n_iter=100,
+            n_iter=200,
+            switch_at_iter=100,
             gamma=0.99,  # Discount past rewards by a percentage
             decay=0.9,  # Decay of RMSProp optimizer
             epsilon=1e-9,  # Epsilon of RMSProp optimizer
@@ -69,6 +79,8 @@ class REINFORCE(Agent):
         config = self.config
         total_n_trajectories = 0
         for iteration in range(config["n_iter"]):
+            if iteration == 100:
+                self.env_runner = self.env_runner_target
             # Collect trajectories until we get timesteps_per_batch total timesteps
             trajectories = self.env_runner.get_trajectories()
             total_n_trajectories += len(trajectories)
@@ -101,9 +113,9 @@ class REINFORCE(Agent):
             self.saver.save(self.session, os.path.join(self.monitor_path, "model"))
 
 class REINFORCEDiscrete(REINFORCE):
-    def __init__(self, env, monitor_path, rnn=False, video=True, **usercfg):
+    def __init__(self, envs, monitor_path, rnn=False, video=True, **usercfg):
         self.rnn = rnn
-        super(REINFORCEDiscrete, self).__init__(env, monitor_path, video=video, **usercfg)
+        super(REINFORCEDiscrete, self).__init__(envs, monitor_path, video=video, **usercfg)
 
     def build_network(self):
         if self.rnn:
@@ -170,9 +182,9 @@ class REINFORCEDiscrete(REINFORCE):
         self.train = optimizer.minimize(loss)
 
 class REINFORCEContinuous(REINFORCE):
-    def __init__(self, env, rnn, monitor_path, video=True, **usercfg):
+    def __init__(self, envs, rnn, monitor_path, video=True, **usercfg):
         self.rnn = rnn
-        super(REINFORCEContinuous, self).__init__(env, monitor_path, video=video, **usercfg)
+        super(REINFORCEContinuous, self).__init__(envs, monitor_path, video=video, **usercfg)
 
     def build_network(self):
         if self.rnn:
@@ -277,9 +289,9 @@ def flatten(x):
     return tf.reshape(x, [-1, np.prod(x.get_shape().as_list()[1:])])
 
 class REINFORCEDiscreteCNN(REINFORCEDiscrete):
-    def __init__(self, env, monitor_path, video=True, **usercfg):
+    def __init__(self, envs, monitor_path, video=True, **usercfg):
         usercfg["n_hidden_units"] = 200
-        super(REINFORCEDiscreteCNN, self).__init__(env, monitor_path, video=video, **usercfg)
+        super(REINFORCEDiscreteCNN, self).__init__(envs, monitor_path, video=video, **usercfg)
         self.config.update(usercfg)
 
     def reset_env(self):

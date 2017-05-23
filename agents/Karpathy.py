@@ -30,6 +30,9 @@ def random_with_probability(output, n_actions, temperature=1.0):
 
 class Karpathy(Agent):
     """Karpathy policy gradient agent"""
+
+    n_environments = "single"
+
     def __init__(self, env, monitor_path, video=True, **usercfg):
         super(Karpathy, self).__init__(**usercfg)
         self.env = wrappers.Monitor(env, monitor_path, force=True, video_callable=(None if video else False))
